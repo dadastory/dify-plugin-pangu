@@ -1,0 +1,49 @@
+provider: pangu
+label:
+  en_US: "pangu"
+description:
+  en_US: "Models provided by pangu."
+  zh_Hans: "华为Pangu 提供的模型。"
+icon_small:
+  en_US: "PanguLargeModels.svg"
+icon_large:
+  en_US: "PanguLargeModels.svg"
+background: "#E5E7EB"
+help:
+  title:
+    en_US: "Get your API Key from pangu"
+    zh_Hans: "从 pangu 获取 API Key"
+  url:
+    en_US: "https://__put_your_url_here__/account/api-keys"
+supported_model_types:
+  - llm
+configurate_methods:
+  - customizable-model
+model_credential_schema:
+  model:
+    label:
+      en_US: Model Name of Pangu instance
+      zh_Hans: Pangu实例名称
+    placeholder:
+      en_US: Enter your Pangu instance name
+      zh_Hans: 请输入Pangu实例名称
+  credential_form_schemas:
+    - variable: server_url
+      type: text-input
+      label:
+        en_US: the url of Pangu instance
+        zh_Hans: Pangu服务器URL
+      required: true
+    - variable: api_key
+      label:
+        en_US: Pangu api key
+      type: text-input
+      required: false
+      placeholder:
+        zh_Hans: 在此输入您的 Pangu Api key
+        en_US: Enter your pangu api key
+extra:
+  python:
+    provider_source: provider/pangu.py
+    model_sources:
+      - "models/llm/llm.py"

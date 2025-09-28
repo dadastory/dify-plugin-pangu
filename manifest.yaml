@@ -1,0 +1,35 @@
+version: 0.0.1
+type: plugin
+author: dadastory
+name: pangu
+label:
+  en_US: Pangu
+  ja_JP: Pangu
+  zh_Hans: 盘古
+  pt_BR: Pangu
+description:
+  en_US: A llm plugin for huawei pangu model
+  ja_JP: A llm plugin for huawei pangu model
+  zh_Hans: 华为盘古大模型插件
+  pt_BR: A llm plugin for huawei pangu model
+icon: PanguLargeModels.svg
+icon_dark: PanguLargeModels.svg
+resource:
+  memory: 268435456
+  permission: { }
+plugins:
+  models:
+    - provider/pangu.yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: null
+created_at: 2025-09-26T16:46:24.945141881+08:00
+privacy: PRIVACY.md
+verified: false
