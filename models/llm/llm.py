@@ -95,16 +95,15 @@ class LightragLargeLanguageModel(LargeLanguageModel):
         if not enable_reasoning:
             pattern = rf'^.*?{PanguThinkingToken.think_end.value}'
             return re.sub(pattern, '', content, flags=re.DOTALL)
-
         if PanguThinkingToken.think_start.value in content:
-            return content.replace(PanguThinkingToken.think_start.value, '<think>')
+            return content.replace(PanguThinkingToken.think_start.value, '<think>\n')
         elif PanguThinkingToken.think_end.value in content:
-            return content.replace(PanguThinkingToken.think_end.value, '</think>')
+            return content.replace(PanguThinkingToken.think_end.value, '\n</think>')
         return content
 
     def _warp_thinking_content(self, content: str, enable_reasoning: bool) -> str:
-        wrap_content = content.replace(PanguThinkingToken.think_start.value, "<think>")
-        wrap_content = wrap_content.replace(PanguThinkingToken.think_end.value, "</think>")
+        wrap_content = content.replace(PanguThinkingToken.think_start.value, "<think>\n")
+        wrap_content = wrap_content.replace(PanguThinkingToken.think_end.value, "\n</think>")
         if not enable_reasoning:
             wrap_content = re.sub(r"<think>.*?</think>", "", wrap_content, flags=re.DOTALL)
         return wrap_content
