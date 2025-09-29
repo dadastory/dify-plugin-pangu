@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class CredentialParams(BaseModel):
     server_url: str
-    api_key: Optional[str] = ''
+    api_key: Optional[str] = 'none'
 
 
 class PanguThinkingToken(Enum):
@@ -79,7 +79,7 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             api_key=params.api_key,
             base_url=params.server_url,
         )
-        enable_reasoning = model_parameters.pop("enable_reasoning", True)
+        enable_thinking = model_parameters.pop("enable_thinking", True)
         print(prompt_messages)
         response = client.chat.completions.create(
             model=model,
@@ -88,11 +88,11 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             stream=stream
         )
         if stream:
-            return self._handle_stream_response(response, prompt_messages, enable_reasoning)
-        return self._handle_sync_response(response, prompt_messages, enable_reasoning)
+            return self._handle_stream_response(response, prompt_messages, enable_thinking)
+        return self._handle_sync_response(response, prompt_messages, enable_thinking)
 
-    def _warp_stream_thinking_content(self, content: str, enable_reasoning: bool) -> str:
-        if not enable_reasoning:
+    def _warp_stream_thinking_content(self, content: str, enable_thinking: bool) -> str:
+        if not enable_thinking:
             pattern = rf'^.*?\[unused17\]'
             return re.sub(pattern, '', content, flags=re.DOTALL)
         if PanguThinkingToken.think_start.value in content:
@@ -101,15 +101,15 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             return content.replace(PanguThinkingToken.think_end.value, '\n</think>')
         return content
 
-    def _warp_thinking_content(self, content: str, enable_reasoning: bool) -> str:
+    def _warp_thinking_content(self, content: str, enable_thinking: bool) -> str:
         wrap_content = content.replace(PanguThinkingToken.think_start.value, "<think>\n")
         wrap_content = wrap_content.replace(PanguThinkingToken.think_end.value, "\n</think>")
-        if not enable_reasoning:
+        if not enable_thinking:
             wrap_content = re.sub(r"<think>.*?</think>", "", wrap_content, flags=re.DOTALL)
         return wrap_content
 
     def _handle_stream_response(self, response: Stream[ChatCompletionChunk],
-                                prompt_messages: list[PromptMessage], enable_reasoning: bool) -> Generator:
+                                prompt_messages: list[PromptMessage], enable_thinking: bool) -> Generator:
         idx = 0
         has_end_thinking = False
         for chunk in response:
@@ -117,7 +117,7 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             if PanguThinkingToken.think_end.value in detail.content:
                 has_end_thinking = True
 
-            if not enable_reasoning and not has_end_thinking:
+            if not enable_thinking and not has_end_thinking:
                 continue
 
             finish_reason = detail.finish_reason if hasattr(detail, 'finish_reason') else None
@@ -127,7 +127,7 @@ class LightragLargeLanguageModel(LargeLanguageModel):
                 delta=LLMResultChunkDelta(
                     index=idx + 1,
                     message=AssistantPromptMessage(
-                        content=self._warp_stream_thinking_content(detail.content, enable_reasoning),
+                        content=self._warp_stream_thinking_content(detail.content, enable_thinking),
                     ),
                     finish_reason=finish_reason,
                 )
@@ -136,12 +136,12 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             idx += 1
 
     def _handle_sync_response(self, response: ChatCompletion,
-                              prompt_messages: list[PromptMessage], enable_reasoning: bool) -> LLMResult:
+                              prompt_messages: list[PromptMessage], enable_thinking: bool) -> LLMResult:
         return LLMResult(
             model=response.model,
             prompt_messages=prompt_messages,
             message=AssistantPromptMessage(
-                content=self._warp_thinking_content(response.choices[0].message[0].content, enable_reasoning),
+                content=self._warp_thinking_content(response.choices[0].message[0].content, enable_thinking),
             ),
             usage=LLMUsage.empty_usage()
         )
@@ -199,6 +199,10 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             ParameterRule(
                 name="temperature", type=ParameterType.FLOAT,
                 required=False,
+                default=float(0.7),
+                min=0,
+                max=2,
+                precision=2,
                 label=I18nObject(
                     en_US="Temperature", zh_Hans="温度"
                 ),
@@ -210,6 +214,10 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             ParameterRule(
                 name="top_p", type=ParameterType.FLOAT,
                 required=False,
+                default=float(credentials.get("top_p", 1)),
+                min=0,
+                max=1,
+                precision=2,
                 label=I18nObject(
                     en_US="Top P", zh_Hans="核采样 Top P"
                 ),
@@ -227,11 +235,16 @@ class LightragLargeLanguageModel(LargeLanguageModel):
                 help=I18nObject(
                     en_US="The maximum number of tokens to generate in the response.",
                     zh_Hans="生成回复的最大 token 数。"
-                )
+                ),
+                default=4096,
+                min=1,
             ),
             ParameterRule(
                 name="presence_penalty", type=ParameterType.FLOAT,
                 required=False,
+                default=float(0),
+                min=-2,
+                max=2,
                 label=I18nObject(
                     en_US="Presence Penalty", zh_Hans="出现惩罚"
                 ),
@@ -243,6 +256,9 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             ParameterRule(
                 name="frequency_penalty", type=ParameterType.FLOAT,
                 required=False,
+                default=float(0),
+                min=-2,
+                max=2,
                 label=I18nObject(
                     en_US="Frequency Penalty", zh_Hans="频率惩罚"
                 ),
@@ -252,25 +268,14 @@ class LightragLargeLanguageModel(LargeLanguageModel):
                 )
             ),
             ParameterRule(
-                name="stop", type=ParameterType.STRING,
+                name="enable_thinking", type=ParameterType.BOOLEAN,
                 required=False,
                 label=I18nObject(
-                    en_US="Stop Sequences", zh_Hans="停止序列"
-                ),
-                help=I18nObject(
-                    en_US="A list of sequences where the model will stop generating further tokens.",
-                    zh_Hans="当生成结果出现这些序列时，模型会停止输出。"
-                )
-            ),
-            ParameterRule(
-                name="enable_reasoning", type=ParameterType.BOOLEAN,
-                required=False,
-                label=I18nObject(
-                    en_US="Enable Reasoning", zh_Hans="启用慢思考"
+                    en_US="Enable Thinking", zh_Hans="启用慢思考"
                 ),
                 help=I18nObject(
                     en_US="If true, the model will return reasoning traces (slow thinking) in <think>...</think> blocks.",
-                    zh_Hans="如果为 true，模型将返回慢思考推理过程（以 <think>...</think> 包裹）。"
+                    zh_Hans="如果为 true，模型将显示慢思考推理过程，否则不显示慢思考内容。"
                 )
             )
         ]
