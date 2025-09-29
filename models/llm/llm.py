@@ -91,11 +91,15 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             return self._handle_stream_response(response, prompt_messages, enable_reasoning)
         return self._handle_sync_response(response, prompt_messages, enable_reasoning)
 
-    def _warp_stream_thinking_content(self, content: str) -> str:
-        if content == PanguThinkingToken.think_start.value:
-            return '<think>'
-        elif content == PanguThinkingToken.think_end.value:
-            return '</think>'
+    def _warp_stream_thinking_content(self, content: str, enable_reasoning: bool) -> str:
+        if not enable_reasoning:
+            pattern = rf'^.*?{PanguThinkingToken.think_end.value}'
+            return re.sub(pattern, '', content, flags=re.DOTALL)
+
+        if PanguThinkingToken.think_start.value in content:
+            return content.replace(PanguThinkingToken.think_start.value, '<think>')
+        elif PanguThinkingToken.think_end.value in content:
+            return content.replace(PanguThinkingToken.think_end.value, '</think>')
         return content
 
     def _warp_thinking_content(self, content: str, enable_reasoning: bool) -> str:
@@ -111,11 +115,12 @@ class LightragLargeLanguageModel(LargeLanguageModel):
         has_end_thinking = False
         for chunk in response:
             detail = chunk.choices[0].delta
-            if detail.content == PanguThinkingToken.think_end.value:
+            if PanguThinkingToken.think_end.value in detail.content:
                 has_end_thinking = True
 
             if not enable_reasoning and not has_end_thinking:
                 continue
+
             finish_reason = detail.finish_reason if hasattr(detail, 'finish_reason') else None
             yield LLMResultChunk(
                 model=chunk.model,
@@ -123,7 +128,7 @@ class LightragLargeLanguageModel(LargeLanguageModel):
                 delta=LLMResultChunkDelta(
                     index=idx + 1,
                     message=AssistantPromptMessage(
-                        content=self._warp_stream_thinking_content(detail.content),
+                        content=self._warp_stream_thinking_content(detail.content, enable_reasoning),
                     ),
                     finish_reason=finish_reason,
                 )
