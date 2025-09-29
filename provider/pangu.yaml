@@ -22,11 +22,11 @@ configurate_methods:
 model_credential_schema:
   model:
     label:
-      en_US: Model Name of Pangu instance
-      zh_Hans: Pangu实例名称
+      en_US: Model Name of Pangu
+      zh_Hans: Pangu模型名称
     placeholder:
-      en_US: Enter your Pangu instance name
-      zh_Hans: 请输入Pangu实例名称
+      en_US: Enter your Pangu model
+      zh_Hans: 请输入Pangu模型名称
   credential_form_schemas:
     - variable: server_url
       type: text-input
@@ -37,7 +37,7 @@ model_credential_schema:
     - variable: api_key
       label:
         en_US: Pangu api key
-      type: text-input
+      type: secret-input
       required: false
       placeholder:
         zh_Hans: 在此输入您的 Pangu Api key

@@ -22,7 +22,7 @@ from dify_plugin.errors.model import (
     CredentialsValidateFailedError, InvokeError, InvokeConnectionError, )
 from httpx import HTTPStatusError
 from openai import OpenAI, Stream
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk, ChatCompletion
+from openai.types.chat import ChatCompletionChunk, ChatCompletion
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class CredentialParams(BaseModel):
     server_url: str
-    api_key: Optional[str] = None
+    api_key: Optional[str] = ''
 
 
 class PanguThinkingToken(Enum):
@@ -80,10 +80,10 @@ class LightragLargeLanguageModel(LargeLanguageModel):
             base_url=params.server_url,
         )
         enable_reasoning = model_parameters.pop("enable_reasoning", True)
+        print(prompt_messages)
         response = client.chat.completions.create(
             model=model,
-            messages=[ChatCompletionMessageParam(content=messages.content, role=messages.role) for messages in
-                      prompt_messages],
+            messages=prompt_messages,
             **model_parameters,
             stream=stream
         )
@@ -116,7 +116,7 @@ class LightragLargeLanguageModel(LargeLanguageModel):
 
             if not enable_reasoning and not has_end_thinking:
                 continue
-
+            finish_reason = detail.finish_reason if hasattr(detail, 'finish_reason') else None
             yield LLMResultChunk(
                 model=chunk.model,
                 prompt_messages=prompt_messages,
@@ -125,7 +125,7 @@ class LightragLargeLanguageModel(LargeLanguageModel):
                     message=AssistantPromptMessage(
                         content=self._warp_stream_thinking_content(detail.content),
                     ),
-                    finish_reason=detail.finish_reason,
+                    finish_reason=finish_reason,
                 )
 
             )
