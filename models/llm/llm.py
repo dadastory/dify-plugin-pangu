@@ -93,7 +93,7 @@ class LightragLargeLanguageModel(LargeLanguageModel):
 
     def _warp_stream_thinking_content(self, content: str, enable_reasoning: bool) -> str:
         if not enable_reasoning:
-            pattern = rf'^.*?{PanguThinkingToken.think_end.value}'
+            pattern = rf'^.*?\[unused17\]'
             return re.sub(pattern, '', content, flags=re.DOTALL)
         if PanguThinkingToken.think_start.value in content:
             return content.replace(PanguThinkingToken.think_start.value, '<think>\n')
