@@ -11,10 +11,10 @@ icon_large:
 background: "#E5E7EB"
 help:
   title:
-    en_US: "Get your API Key from pangu"
-    zh_Hans: "从 pangu 获取 API Key"
+    en_US: "Get your API Key from pangu vllm server"
+    zh_Hans: "从 vllm启动的pangu模型服务中获取APIKey"
   url:
-    en_US: "https://__put_your_url_here__/account/api-keys"
+    en_US: "https://localhost:8080/v1"
 supported_model_types:
   - llm
 configurate_methods:
